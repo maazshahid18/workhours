@@ -1,0 +1,50 @@
+{
+    "name": "WorkTime - Work Hours Calculator",
+    "short_name": "WorkTime",
+    "description": "Calculate your work hours and know exactly when you can leave the office",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#0f0f23",
+    "theme_color": "#667eea",
+    "orientation": "portrait-primary",
+    "icons": [
+        {
+            "src": "/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ],
+    "screenshots": [
+        {
+            "src": "/screenshot.png",
+            "sizes": "1280x720",
+            "type": "image/png"
+        }
+    ],
+    "categories": [
+        "productivity",
+        "utilities",
+        "business"
+    ],
+    "shortcuts": [
+        {
+            "name": "Calculate Hours",
+            "short_name": "Calculate",
+            "description": "Calculate your departure time",
+            "url": "/",
+            "icons": [
+                {
+                    "src": "/icon-192.png",
+                    "sizes": "192x192"
+                }
+            ]
+        }
+    ]
+}

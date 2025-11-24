@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import styles from './page.module.css';
+import InstallPrompt from './components/InstallPrompt';
 
 export default function Home() {
   const [arrivalTime, setArrivalTime] = useState('');
@@ -557,6 +558,7 @@ export default function Home() {
         <footer className={styles.footer}>
         </footer>
       </div>
+      <InstallPrompt />
     </>
   );
 }
