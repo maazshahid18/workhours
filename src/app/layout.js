@@ -12,22 +12,23 @@ export const metadata = {
   description: "Calculate your work hours and find out exactly when you can leave the office based on your arrival time. Built for teams with 9-hour workdays and 5% buffer.",
   keywords: "work hours calculator, departure time, office hours, work time tracker",
   manifest: "/manifest.json",
-  themeColor: "#667eea",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
     title: "WorkTime",
   },
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 1,
-    userScalable: false,
-  },
   icons: {
     icon: "/favicon.png",
     apple: "/icon-192.png",
   },
+};
+
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: "#667eea",
 };
 
 export default function RootLayout({ children }) {
