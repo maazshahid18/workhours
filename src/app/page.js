@@ -25,13 +25,75 @@ export default function Home() {
 
   const minimumHours = requiredHours * (1 - bufferPercentage / 100);
 
-  // Set current time on mount
+  // Load from localStorage on mount
   useEffect(() => {
+    const savedData = localStorage.getItem('workhours-data');
+    const today = new Date().toDateString();
+
+    if (savedData) {
+      try {
+        const parsed = JSON.parse(savedData);
+
+        // Check if the saved data is from today
+        if (parsed.date === today) {
+          // Restore saved data
+          setArrivalTime(parsed.arrivalTime || '');
+          setRequiredHours(parsed.requiredHours || 9);
+          setBufferPercentage(parsed.bufferPercentage || 5);
+          setIs24Hour(parsed.is24Hour !== undefined ? parsed.is24Hour : true);
+
+          // If there was a calculation, restore it
+          if (parsed.arrivalDateTime && parsed.departureDateTime && parsed.fullDepartureDateTime) {
+            const arrival = new Date(parsed.arrivalDateTime);
+            const departureMin = new Date(parsed.departureDateTime);
+            const departureFull = new Date(parsed.fullDepartureDateTime);
+
+            setArrivalDateTime(arrival);
+            setDepartureDateTime(departureMin);
+            setFullDepartureDateTime(departureFull);
+            setDepartureTimeMin(formatTimeFromDate(departureMin, parsed.is24Hour !== undefined ? parsed.is24Hour : true));
+            setDepartureTimeFull(formatTimeFromDate(departureFull, parsed.is24Hour !== undefined ? parsed.is24Hour : true));
+          }
+        } else {
+          // Different day, clear old data and set current time
+          localStorage.removeItem('workhours-data');
+          setCurrentTime();
+        }
+      } catch (e) {
+        console.error('Error loading saved data:', e);
+        setCurrentTime();
+      }
+    } else {
+      // No saved data, set current time
+      setCurrentTime();
+    }
+  }, []);
+
+  // Save to localStorage whenever calculation happens
+  useEffect(() => {
+    if (arrivalDateTime && departureDateTime && fullDepartureDateTime) {
+      const today = new Date().toDateString();
+      const dataToSave = {
+        date: today,
+        arrivalTime,
+        requiredHours,
+        bufferPercentage,
+        is24Hour,
+        arrivalDateTime: arrivalDateTime.toISOString(),
+        departureDateTime: departureDateTime.toISOString(),
+        fullDepartureDateTime: fullDepartureDateTime.toISOString(),
+      };
+      localStorage.setItem('workhours-data', JSON.stringify(dataToSave));
+    }
+  }, [arrivalDateTime, departureDateTime, fullDepartureDateTime, arrivalTime, requiredHours, bufferPercentage, is24Hour]);
+
+  // Helper function to set current time
+  const setCurrentTime = () => {
     const now = new Date();
     const hours = String(now.getHours()).padStart(2, '0');
     const minutes = String(now.getMinutes()).padStart(2, '0');
     setArrivalTime(`${hours}:${minutes}`);
-  }, []);
+  };
 
   // Cleanup interval on unmount
   useEffect(() => {
@@ -154,6 +216,29 @@ export default function Home() {
       return `${hours}:${minutes} ${ampm}`;
     }
   };
+
+  const formatTimeFromDate = (date, is24HourFormat) => {
+    if (is24HourFormat) {
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      return `${hours}:${minutes}`;
+    } else {
+      let hours = date.getHours();
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      hours = hours % 12;
+      hours = hours ? hours : 12;
+      return `${hours}:${minutes} ${ampm}`;
+    }
+  };
+
+  // Update displayed times when format changes
+  useEffect(() => {
+    if (departureDateTime && fullDepartureDateTime) {
+      setDepartureTimeMin(formatTime(departureDateTime));
+      setDepartureTimeFull(formatTime(fullDepartureDateTime));
+    }
+  }, [is24Hour, departureDateTime, fullDepartureDateTime]);
 
   const triggerConfetti = () => {
     const colors = ['#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe', '#00f2fe'];
