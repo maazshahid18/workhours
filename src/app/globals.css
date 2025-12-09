@@ -13,10 +13,23 @@
   --background-card-hover: #FFFFFF;
   --background-input: #F7FAFC;
 
-  /* Text Colors - Darker for contrast on white */
-  --text-primary: #2D3748;
-  --text-secondary: #718096;
-  --text-muted: #A0AEC0;
+  /* Text Colors - High Contrast */
+  --text-primary: #1A202C;
+  /* Almost black */
+  --text-secondary: #4A5568;
+  /* Dark gray */
+  --text-muted: #718096;
+  /* Medium gray */
+
+  /* Solid Colors */
+  --primary-solid: #667eea;
+  --success-solid: #38a169;
+  --secondary-solid: #805ad5;
+
+  /* Gradients - Kept only for specific accents */
+  --primary-gradient: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+  --secondary-gradient: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%);
+  --success-gradient: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
 
   /* Borders & Shadows */
   --border-color: #E2E8F0;

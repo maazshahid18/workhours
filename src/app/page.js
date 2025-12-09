@@ -10,6 +10,7 @@ export default function Home() {
   const [bufferPercentage, setBufferPercentage] = useState(5);
   const [showSettings, setShowSettings] = useState(false);
   const [is24Hour, setIs24Hour] = useState(true);
+  const [isHalfDay, setIsHalfDay] = useState(false);
 
   const [arrivalDateTime, setArrivalDateTime] = useState(null);
   const [departureDateTime, setDepartureDateTime] = useState(null);
@@ -45,7 +46,8 @@ export default function Home() {
   const [showCelebrationFull, setShowCelebrationFull] = useState(false);
   const intervalRef = useRef(null);
 
-  const minimumHours = requiredHours * (1 - bufferPercentage / 100);
+  const effectiveRequiredHours = isHalfDay ? requiredHours / 2 : requiredHours;
+  const minimumHours = effectiveRequiredHours * (1 - bufferPercentage / 100);
 
   // Helper function to set default time
   const setDefaultTime = useCallback(() => {
@@ -73,6 +75,7 @@ export default function Home() {
           setRequiredHours(parsed.requiredHours || 9);
           setBufferPercentage(parsed.bufferPercentage || 5);
           setIs24Hour(parsed.is24Hour !== undefined ? parsed.is24Hour : true);
+          setIsHalfDay(parsed.isHalfDay || false);
 
           // If there was a calculation, restore it
           if (parsed.arrivalDateTime && parsed.departureDateTime && parsed.fullDepartureDateTime) {
@@ -85,9 +88,29 @@ export default function Home() {
             setFullDepartureDateTime(departureFull);
           }
         } else {
-          // Different day, clear old data and set default time
-          localStorage.removeItem('workhours-data');
+          // Different day, clear daily data but keep preferences
+          setRequiredHours(parsed.requiredHours || 9);
+          setBufferPercentage(parsed.bufferPercentage || 5);
+          setIs24Hour(parsed.is24Hour !== undefined ? parsed.is24Hour : true);
+
+          // Clear old calculated data
+          setArrivalDateTime(null);
+          setDepartureDateTime(null);
+          setFullDepartureDateTime(null);
+
+          // Set default time for new day
           setDefaultTime();
+
+          // Update localStorage with new date but old prefs
+          const todayData = {
+            date: today,
+            arrivalTime: '10:00', // Default
+            requiredHours: parsed.requiredHours || 9,
+            bufferPercentage: parsed.bufferPercentage || 5,
+            is24Hour: parsed.is24Hour !== undefined ? parsed.is24Hour : true,
+            isHalfDay: false
+          };
+          localStorage.setItem('workhours-data', JSON.stringify(todayData));
         }
       } catch (e) {
         console.error('Error loading saved data:', e);
@@ -109,13 +132,14 @@ export default function Home() {
         requiredHours,
         bufferPercentage,
         is24Hour,
+        isHalfDay,
         arrivalDateTime: arrivalDateTime.toISOString(),
         departureDateTime: departureDateTime.toISOString(),
         fullDepartureDateTime: fullDepartureDateTime.toISOString(),
       };
       localStorage.setItem('workhours-data', JSON.stringify(dataToSave));
     }
-  }, [arrivalDateTime, departureDateTime, fullDepartureDateTime, arrivalTime, requiredHours, bufferPercentage, is24Hour]);
+  }, [arrivalDateTime, departureDateTime, fullDepartureDateTime, arrivalTime, requiredHours, bufferPercentage, is24Hour, isHalfDay]);
 
 
 
@@ -260,7 +284,7 @@ export default function Home() {
 
     // Calculate full departure time (arrival + required hours)
     const departureFull = new Date(arrival);
-    const fullMinutes = requiredHours * 60;
+    const fullMinutes = effectiveRequiredHours * 60;
     departureFull.setMinutes(departureFull.getMinutes() + fullMinutes);
 
     setArrivalDateTime(arrival);
@@ -283,8 +307,8 @@ export default function Home() {
 
   const workingHoursNum = Math.floor(minimumHours);
   const workingMinutesNum = Math.round((minimumHours % 1) * 60);
-  const fullHoursNum = Math.floor(requiredHours);
-  const fullMinutesNum = Math.round((requiredHours % 1) * 60);
+  const fullHoursNum = Math.floor(effectiveRequiredHours);
+  const fullMinutesNum = Math.round((effectiveRequiredHours % 1) * 60);
 
   return (
     <>
@@ -384,6 +408,22 @@ export default function Home() {
                     <span className={!is24Hour ? styles.active : ''}>{12}h</span>
                   </button>
                 </div>
+                <div className={styles.settingRow}>
+                  <label className={styles.settingLabel}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="12" cy="12" r="10" />
+                      <path d="M12 8v4l-2 2" />
+                    </svg>
+                    Half Day?
+                  </label>
+                  <button
+                    onClick={() => setIsHalfDay(!isHalfDay)}
+                    className={styles.timeFormatToggle}
+                  >
+                    <span className={isHalfDay ? styles.active : ''}>Yes</span>
+                    <span className={!isHalfDay ? styles.active : ''}>No</span>
+                  </button>
+                </div>
               </div>
             )}
 
@@ -413,7 +453,7 @@ export default function Home() {
               <div className={styles.infoDivider}></div>
               <div className={styles.infoItem}>
                 <span className={styles.infoLabel}>Buffer Allowed</span>
-                <span className={styles.infoValue}>{bufferPercentage}% ({Math.round(requiredHours * 60 * bufferPercentage / 100)} min)</span>
+                <span className={styles.infoValue}>{bufferPercentage}% ({Math.round(effectiveRequiredHours * 60 * bufferPercentage / 100)} min)</span>
               </div>
               <div className={styles.infoDivider}></div>
               <div className={styles.infoItem}>
