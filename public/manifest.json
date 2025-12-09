@@ -4,8 +4,8 @@
     "description": "Calculate your work hours and know exactly when you can leave the office",
     "start_url": "/",
     "display": "standalone",
-    "background_color": "#0f0f23",
-    "theme_color": "#667eea",
+    "background_color": "#FFFFFF",
+    "theme_color": "#FFFFFF",
     "orientation": "portrait-primary",
     "icons": [
         {

@@ -122,11 +122,18 @@
   box-shadow: var(--shadow-sm);
 }
 
-.settingsBtn:hover {
-  background: rgba(102, 126, 234, 0.25);
-  color: var(--text-primary);
-  transform: rotate(45deg) scale(1.05);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+/* Hover effects only for non-touch devices to prevent stuck states on mobile */
+@media (hover: hover) {
+  .settingsBtn:hover {
+    background: rgba(102, 126, 234, 0.25);
+    color: var(--text-primary);
+    transform: rotate(45deg) scale(1.05);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  }
+}
+
+.settingsBtn:active {
+  transform: scale(0.95);
 }
 
 /* Settings Panel */
@@ -307,7 +314,7 @@
   font-size: 1.25rem;
   font-weight: 700;
   color: white;
-  background: var(--primary-gradient);
+  background: var(--primary-solid);
   border: none;
   border-radius: var(--radius-md);
   cursor: pointer;
