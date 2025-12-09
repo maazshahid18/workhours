@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import styles from './page.module.css';
 import InstallPrompt from './components/InstallPrompt';
 
@@ -11,11 +11,32 @@ export default function Home() {
   const [showSettings, setShowSettings] = useState(false);
   const [is24Hour, setIs24Hour] = useState(true);
 
-  const [departureTimeMin, setDepartureTimeMin] = useState(null);
-  const [departureTimeFull, setDepartureTimeFull] = useState(null);
   const [arrivalDateTime, setArrivalDateTime] = useState(null);
   const [departureDateTime, setDepartureDateTime] = useState(null);
   const [fullDepartureDateTime, setFullDepartureDateTime] = useState(null);
+
+  const formatTime = useCallback((date) => {
+    if (is24Hour) {
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      return `${hours}:${minutes}`;
+    } else {
+      let hours = date.getHours();
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      hours = hours % 12;
+      hours = hours ? hours : 12; // 0 should be 12
+      return `${hours}:${minutes} ${ampm}`;
+    }
+  }, [is24Hour]);
+
+  const departureTimeMin = useMemo(() => {
+    return departureDateTime ? formatTime(departureDateTime) : null;
+  }, [departureDateTime, formatTime]);
+
+  const departureTimeFull = useMemo(() => {
+    return fullDepartureDateTime ? formatTime(fullDepartureDateTime) : null;
+  }, [fullDepartureDateTime, formatTime]);
   const [timeRemaining, setTimeRemaining] = useState(null);
   const [timeRemainingFull, setTimeRemainingFull] = useState(null);
   const [progress, setProgress] = useState(0);
@@ -25,6 +46,16 @@ export default function Home() {
   const intervalRef = useRef(null);
 
   const minimumHours = requiredHours * (1 - bufferPercentage / 100);
+
+  // Helper function to set default time
+  const setDefaultTime = useCallback(() => {
+    // Default to 10:00 AM as requested
+    setArrivalTime('10:00');
+  }, []);
+
+
+
+
 
   // Load from localStorage on mount
   useEffect(() => {
@@ -52,23 +83,21 @@ export default function Home() {
             setArrivalDateTime(arrival);
             setDepartureDateTime(departureMin);
             setFullDepartureDateTime(departureFull);
-            setDepartureTimeMin(formatTimeFromDate(departureMin, parsed.is24Hour !== undefined ? parsed.is24Hour : true));
-            setDepartureTimeFull(formatTimeFromDate(departureFull, parsed.is24Hour !== undefined ? parsed.is24Hour : true));
           }
         } else {
-          // Different day, clear old data and set current time
+          // Different day, clear old data and set default time
           localStorage.removeItem('workhours-data');
-          setCurrentTime();
+          setDefaultTime();
         }
       } catch (e) {
         console.error('Error loading saved data:', e);
-        setCurrentTime();
+        setDefaultTime();
       }
     } else {
-      // No saved data, set current time
-      setCurrentTime();
+      // No saved data, set default time
+      setDefaultTime();
     }
-  }, []);
+  }, [setDefaultTime]);
 
   // Save to localStorage whenever calculation happens
   useEffect(() => {
@@ -88,13 +117,7 @@ export default function Home() {
     }
   }, [arrivalDateTime, departureDateTime, fullDepartureDateTime, arrivalTime, requiredHours, bufferPercentage, is24Hour]);
 
-  // Helper function to set current time
-  const setCurrentTime = () => {
-    const now = new Date();
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    setArrivalTime(`${hours}:${minutes}`);
-  };
+
 
   // Cleanup interval on unmount
   useEffect(() => {
@@ -104,6 +127,57 @@ export default function Home() {
       }
     };
   }, []);
+
+  const createConfetti = useCallback((color) => {
+    const confetti = document.createElement('div');
+    confetti.style.position = 'fixed';
+    confetti.style.width = '10px';
+    confetti.style.height = '10px';
+    confetti.style.backgroundColor = color;
+    confetti.style.left = Math.random() * window.innerWidth + 'px';
+    confetti.style.top = '-10px';
+    confetti.style.opacity = '1';
+    confetti.style.transform = `rotate(${Math.random() * 360}deg)`;
+    confetti.style.zIndex = '9999';
+    confetti.style.pointerEvents = 'none';
+    confetti.style.borderRadius = '50%'; // Round confetti for softer look
+
+    document.body.appendChild(confetti);
+
+    const duration = 3000 + Math.random() * 2000;
+    const startTime = Date.now();
+
+    const animate = () => {
+      const elapsed = Date.now() - startTime;
+      const progress = elapsed / duration;
+
+      if (progress < 1) {
+        const top = progress * (window.innerHeight + 20);
+        const wobble = Math.sin(progress * 10) * 50;
+
+        confetti.style.top = top + 'px';
+        confetti.style.left = (parseFloat(confetti.style.left) + wobble * 0.01) + 'px';
+        confetti.style.opacity = 1 - progress;
+        confetti.style.transform = `rotate(${progress * 720}deg)`;
+
+        requestAnimationFrame(animate);
+      } else {
+        confetti.remove();
+      }
+    };
+
+    requestAnimationFrame(animate);
+  }, []); // No dependencies
+
+  const triggerConfetti = useCallback(() => {
+    // Pastel colors
+    const colors = ['#a8edea', '#fed6e3', '#e0c3fc', '#8ec5fc', '#ff9a9e', '#fecfef'];
+    const confettiCount = 50;
+
+    for (let i = 0; i < confettiCount; i++) {
+      createConfetti(colors[Math.floor(Math.random() * colors.length)]);
+    }
+  }, [createConfetti]);
 
   // Update countdown
   useEffect(() => {
@@ -165,7 +239,7 @@ export default function Home() {
         clearInterval(intervalRef.current);
       }
     };
-  }, [departureDateTime, fullDepartureDateTime, arrivalDateTime]);
+  }, [departureDateTime, fullDepartureDateTime, arrivalDateTime, triggerConfetti]);
 
   const handleCalculate = () => {
     if (!arrivalTime) {
@@ -192,8 +266,6 @@ export default function Home() {
     setArrivalDateTime(arrival);
     setDepartureDateTime(departureMin);
     setFullDepartureDateTime(departureFull);
-    setDepartureTimeMin(formatTime(departureMin));
-    setDepartureTimeFull(formatTime(departureFull));
     setShowCelebration(false);
     setShowCelebrationFull(false);
 
@@ -203,93 +275,11 @@ export default function Home() {
     }, 100);
   };
 
-  const formatTime = (date) => {
-    if (is24Hour) {
-      const hours = String(date.getHours()).padStart(2, '0');
-      const minutes = String(date.getMinutes()).padStart(2, '0');
-      return `${hours}:${minutes}`;
-    } else {
-      let hours = date.getHours();
-      const minutes = String(date.getMinutes()).padStart(2, '0');
-      const ampm = hours >= 12 ? 'PM' : 'AM';
-      hours = hours % 12;
-      hours = hours ? hours : 12; // 0 should be 12
-      return `${hours}:${minutes} ${ampm}`;
-    }
-  };
 
-  const formatTimeFromDate = (date, is24HourFormat) => {
-    if (is24HourFormat) {
-      const hours = String(date.getHours()).padStart(2, '0');
-      const minutes = String(date.getMinutes()).padStart(2, '0');
-      return `${hours}:${minutes}`;
-    } else {
-      let hours = date.getHours();
-      const minutes = String(date.getMinutes()).padStart(2, '0');
-      const ampm = hours >= 12 ? 'PM' : 'AM';
-      hours = hours % 12;
-      hours = hours ? hours : 12;
-      return `${hours}:${minutes} ${ampm}`;
-    }
-  };
 
-  // Update displayed times when format changes
-  useEffect(() => {
-    if (departureDateTime && fullDepartureDateTime) {
-      setDepartureTimeMin(formatTime(departureDateTime));
-      setDepartureTimeFull(formatTime(fullDepartureDateTime));
-    }
-  }, [is24Hour, departureDateTime, fullDepartureDateTime]);
 
-  const triggerConfetti = () => {
-    const colors = ['#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe', '#00f2fe'];
-    const confettiCount = 50;
 
-    for (let i = 0; i < confettiCount; i++) {
-      createConfetti(colors[Math.floor(Math.random() * colors.length)]);
-    }
-  };
 
-  const createConfetti = (color) => {
-    const confetti = document.createElement('div');
-    confetti.style.position = 'fixed';
-    confetti.style.width = '10px';
-    confetti.style.height = '10px';
-    confetti.style.backgroundColor = color;
-    confetti.style.left = Math.random() * window.innerWidth + 'px';
-    confetti.style.top = '-10px';
-    confetti.style.opacity = '1';
-    confetti.style.transform = `rotate(${Math.random() * 360}deg)`;
-    confetti.style.zIndex = '9999';
-    confetti.style.pointerEvents = 'none';
-    confetti.style.borderRadius = '2px';
-
-    document.body.appendChild(confetti);
-
-    const duration = 3000 + Math.random() * 2000;
-    const startTime = Date.now();
-
-    const animate = () => {
-      const elapsed = Date.now() - startTime;
-      const progress = elapsed / duration;
-
-      if (progress < 1) {
-        const top = progress * (window.innerHeight + 20);
-        const wobble = Math.sin(progress * 10) * 50;
-
-        confetti.style.top = top + 'px';
-        confetti.style.left = (parseFloat(confetti.style.left) + wobble * 0.01) + 'px';
-        confetti.style.opacity = 1 - progress;
-        confetti.style.transform = `rotate(${progress * 720}deg)`;
-
-        requestAnimationFrame(animate);
-      } else {
-        confetti.remove();
-      }
-    };
-
-    requestAnimationFrame(animate);
-  };
 
   const workingHoursNum = Math.floor(minimumHours);
   const workingMinutesNum = Math.round((minimumHours % 1) * 60);
@@ -307,8 +297,8 @@ export default function Home() {
               <path d="M20 8V20L28 24" stroke="url(#gradient)" strokeWidth="2.5" strokeLinecap="round" />
               <defs>
                 <linearGradient id="gradient" x1="0" y1="0" x2="40" y2="40">
-                  <stop offset="0%" stopColor="#667eea" />
-                  <stop offset="100%" stopColor="#764ba2" />
+                  <stop offset="0%" stopColor="#a8edea" />
+                  <stop offset="100%" stopColor="#fed6e3" />
                 </linearGradient>
               </defs>
             </svg>
