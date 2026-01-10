@@ -4,6 +4,23 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import styles from './page.module.css';
 import InstallPrompt from './components/InstallPrompt';
 
+
+const jokes = [
+  "Time is an illusion. Lunchtime doubly so. 🥪",
+  "I love deadlines. I love the whooshing noise they make as they go by. 💨",
+  "Hard work never killed anyone, but why take the chance? 🤷‍♂️",
+  "My keyboard is tired, it needs a nap. 😴",
+  "Loading freedom... Please wait. 🔄",
+  "Warning: Leaving early may result in happiness. 😊",
+  "Work hard... or at least type furiously when the boss walks by. ⌨️",
+  "Error 404: Motivation not found. Try coffee. ☕",
+  "I'm not lazy, I'm on energy saving mode. 🔋",
+  "Why do they call it rush hour when nothing moves? 🚗",
+  "Walking out of work like: Mission Passed! Respect + // GTA Style",
+  "Your computer called. It wants you to go home. 🖥️",
+  "Freedom is just a few hours away! 🕊️"
+];
+
 export default function Home() {
   const [arrivalTime, setArrivalTime] = useState('');
   const [requiredHours, setRequiredHours] = useState(9);
@@ -11,6 +28,7 @@ export default function Home() {
   const [showSettings, setShowSettings] = useState(false);
   const [is24Hour, setIs24Hour] = useState(true);
   const [isHalfDay, setIsHalfDay] = useState(false);
+  const [currentJoke, setCurrentJoke] = useState('');
 
   const [arrivalDateTime, setArrivalDateTime] = useState(null);
   const [departureDateTime, setDepartureDateTime] = useState(null);
@@ -277,15 +295,18 @@ export default function Home() {
     const arrival = new Date();
     arrival.setHours(hours, minutes, 0, 0);
 
-    // Calculate minimum departure time (arrival + minimum hours with buffer)
+    // Calculate minimum departure time (arrival + minimum hours with buffer + 1 minute safety)
     const departureMin = new Date(arrival);
     const minimumMinutes = minimumHours * 60;
-    departureMin.setMinutes(departureMin.getMinutes() + minimumMinutes);
+    departureMin.setMinutes(departureMin.getMinutes() + minimumMinutes + 1);
 
-    // Calculate full departure time (arrival + required hours)
+    // Calculate full departure time (arrival + required hours + 1 minute safety)
     const departureFull = new Date(arrival);
     const fullMinutes = effectiveRequiredHours * 60;
-    departureFull.setMinutes(departureFull.getMinutes() + fullMinutes);
+    departureFull.setMinutes(departureFull.getMinutes() + fullMinutes + 1);
+
+    // Pick a random joke
+    setCurrentJoke(jokes[Math.floor(Math.random() * jokes.length)]);
 
     setArrivalDateTime(arrival);
     setDepartureDateTime(departureMin);
@@ -581,6 +602,13 @@ export default function Home() {
                   <p>Time to go home!</p>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Humor Popup/Card - Only show when we have a result for today */}
+          {departureTimeMin && currentJoke && (
+            <div className={styles.jokeCard}>
+              <p className={styles.jokeText}>"{currentJoke}"</p>
             </div>
           )}
         </main>
