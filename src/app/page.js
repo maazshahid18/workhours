@@ -298,12 +298,12 @@ export default function Home() {
     // Calculate minimum departure time (arrival + minimum hours with buffer + 1 minute safety)
     const departureMin = new Date(arrival);
     const minimumMinutes = minimumHours * 60;
-    departureMin.setMinutes(departureMin.getMinutes() + minimumMinutes + 1);
+    departureMin.setMinutes(departureMin.getMinutes() + Math.round(minimumMinutes) + 1);
 
     // Calculate full departure time (arrival + required hours + 1 minute safety)
     const departureFull = new Date(arrival);
     const fullMinutes = effectiveRequiredHours * 60;
-    departureFull.setMinutes(departureFull.getMinutes() + fullMinutes + 1);
+    departureFull.setMinutes(departureFull.getMinutes() + Math.round(fullMinutes) + 1);
 
     // Pick a random joke
     setCurrentJoke(jokes[Math.floor(Math.random() * jokes.length)]);
