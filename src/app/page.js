@@ -28,7 +28,13 @@ export default function Home() {
   const [showSettings, setShowSettings] = useState(false);
   const [is24Hour, setIs24Hour] = useState(true);
   const [isHalfDay, setIsHalfDay] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [historyData, setHistoryData] = useState([]);
   const [currentJoke, setCurrentJoke] = useState('');
+
+  const notificationSent = useRef({ min: false, full: false });
 
   const [arrivalDateTime, setArrivalDateTime] = useState(null);
   const [departureDateTime, setDepartureDateTime] = useState(null);
@@ -94,6 +100,8 @@ export default function Home() {
           setBufferPercentage(parsed.bufferPercentage || 5);
           setIs24Hour(parsed.is24Hour !== undefined ? parsed.is24Hour : true);
           setIsHalfDay(parsed.isHalfDay || false);
+          setNotificationsEnabled(parsed.notificationsEnabled || false);
+          setIsDarkMode(parsed.isDarkMode || false);
 
           // If there was a calculation, restore it
           if (parsed.arrivalDateTime && parsed.departureDateTime && parsed.fullDepartureDateTime) {
@@ -110,6 +118,7 @@ export default function Home() {
           setRequiredHours(parsed.requiredHours || 9);
           setBufferPercentage(parsed.bufferPercentage || 5);
           setIs24Hour(parsed.is24Hour !== undefined ? parsed.is24Hour : true);
+          setNotificationsEnabled(parsed.notificationsEnabled || false);
 
           // Clear old calculated data
           setArrivalDateTime(null);
@@ -126,7 +135,9 @@ export default function Home() {
             requiredHours: parsed.requiredHours || 9,
             bufferPercentage: parsed.bufferPercentage || 5,
             is24Hour: parsed.is24Hour !== undefined ? parsed.is24Hour : true,
-            isHalfDay: false
+            isHalfDay: false,
+            notificationsEnabled: parsed.notificationsEnabled || false,
+            isDarkMode: parsed.isDarkMode || false
           };
           localStorage.setItem('workhours-data', JSON.stringify(todayData));
         }
@@ -140,6 +151,27 @@ export default function Home() {
     }
   }, [setDefaultTime]);
 
+  // Load history data
+  useEffect(() => {
+    const savedHistory = localStorage.getItem('workhours-history');
+    if (savedHistory) {
+      try {
+        setHistoryData(JSON.parse(savedHistory));
+      } catch (e) {
+        console.error('Error loading history:', e);
+      }
+    }
+  }, []);
+
+  // Apply dark mode
+  useEffect(() => {
+    if (isDarkMode) {
+      document.body.classList.add('dark-mode');
+    } else {
+      document.body.classList.remove('dark-mode');
+    }
+  }, [isDarkMode]);
+
   // Save to localStorage whenever calculation happens
   useEffect(() => {
     if (arrivalDateTime && departureDateTime && fullDepartureDateTime) {
@@ -151,13 +183,15 @@ export default function Home() {
         bufferPercentage,
         is24Hour,
         isHalfDay,
+        notificationsEnabled,
+        isDarkMode,
         arrivalDateTime: arrivalDateTime.toISOString(),
         departureDateTime: departureDateTime.toISOString(),
         fullDepartureDateTime: fullDepartureDateTime.toISOString(),
       };
       localStorage.setItem('workhours-data', JSON.stringify(dataToSave));
     }
-  }, [arrivalDateTime, departureDateTime, fullDepartureDateTime, arrivalTime, requiredHours, bufferPercentage, is24Hour, isHalfDay]);
+  }, [arrivalDateTime, departureDateTime, fullDepartureDateTime, arrivalTime, requiredHours, bufferPercentage, is24Hour, isHalfDay, notificationsEnabled, isDarkMode]);
 
 
 
@@ -234,6 +268,14 @@ export default function Home() {
         setTimeRemaining({ hours: 0, minutes: 0, seconds: 0 });
         setProgress(100);
         setShowCelebration(true);
+
+        if (notificationsEnabled && !notificationSent.current.min) {
+          new Notification("Buffer Time Reached! ✅", {
+            body: "You can leave now with buffer time completed.",
+            icon: "/icon-192.png"
+          });
+          notificationSent.current.min = true;
+        }
       } else {
         const totalSeconds = Math.floor(remainingMin / 1000);
         const hours = Math.floor(totalSeconds / 3600);
@@ -258,6 +300,14 @@ export default function Home() {
           clearInterval(intervalRef.current);
         }
         triggerConfetti();
+
+        if (notificationsEnabled && !notificationSent.current.full) {
+          new Notification("Work Day Complete! 🎉", {
+            body: "You have completed your full hours. Time to go home!",
+            icon: "/icon-192.png"
+          });
+          notificationSent.current.full = true;
+        }
       } else {
         const totalSecondsFull = Math.floor(remainingFull / 1000);
         const hoursFull = Math.floor(totalSecondsFull / 3600);
@@ -305,14 +355,34 @@ export default function Home() {
     const fullMinutes = effectiveRequiredHours * 60;
     departureFull.setMinutes(departureFull.getMinutes() + Math.round(fullMinutes) + 1);
 
+    // Update History
+    const todayStr = new Date().toDateString();
+    setHistoryData(prev => {
+      // Remove existing entry for today if any, to update it
+      const newHistory = prev.filter(item => item.date !== todayStr);
+      newHistory.unshift({
+        date: todayStr,
+        arrivalTime: arrivalTime,
+        departureMin: formatTime(departureMin),
+        departureFull: formatTime(departureFull),
+        workedHours: effectiveRequiredHours
+      });
+      // Keep only last 7 days
+      const limitedHistory = newHistory.slice(0, 7);
+      localStorage.setItem('workhours-history', JSON.stringify(limitedHistory));
+      return limitedHistory;
+    });
+
     // Pick a random joke
     setCurrentJoke(jokes[Math.floor(Math.random() * jokes.length)]);
 
     setArrivalDateTime(arrival);
     setDepartureDateTime(departureMin);
     setFullDepartureDateTime(departureFull);
+    setFullDepartureDateTime(departureFull);
     setShowCelebration(false);
     setShowCelebrationFull(false);
+    notificationSent.current = { min: false, full: false };
 
     // Scroll to results
     setTimeout(() => {
@@ -370,8 +440,40 @@ export default function Home() {
                     <path d="M12 1v6m0 6v6M5.6 5.6l4.2 4.2m4.2 4.2l4.2 4.2M1 12h6m6 0h6M5.6 18.4l4.2-4.2m4.2-4.2l4.2-4.2" />
                   </svg>
                 </button>
+                <button
+                  onClick={() => setShowHistory(!showHistory)}
+                  className={styles.settingsBtn}
+                  title="History"
+                  style={{ marginLeft: '10px' }}
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 8v4l3 3" />
+                    <circle cx="12" cy="12" r="10" />
+                  </svg>
+                </button>
               </div>
             </div>
+
+            {showHistory && (
+              <div className={styles.settingsPanel}>
+                <h3 className={styles.historyTitle}>Weekly History</h3>
+                {historyData.length === 0 ? (
+                  <p className={styles.historyEmpty}>No history yet. Start calculating!</p>
+                ) : (
+                  <div className={styles.historyList}>
+                    {historyData.map((item, index) => (
+                      <div key={index} className={styles.historyItem}>
+                        <div className={styles.historyDate}>{item.date.split(' ').slice(0, 3).join(' ')}</div>
+                        <div className={styles.historyDetails}>
+                          <span>In: {item.arrivalTime}</span>
+                          <span>Out: {item.departureFull}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {showSettings && (
               <div className={styles.settingsPanel}>
@@ -443,6 +545,46 @@ export default function Home() {
                   >
                     <span className={isHalfDay ? styles.active : ''}>Yes</span>
                     <span className={!isHalfDay ? styles.active : ''}>No</span>
+                  </button>
+                </div>
+                <div className={styles.settingRow}>
+                  <label className={styles.settingLabel}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                      <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                    </svg>
+                    Notifications
+                  </label>
+                  <button
+                    onClick={() => {
+                      if (!notificationsEnabled) {
+                        Notification.requestPermission().then(p => {
+                          if (p === 'granted') setNotificationsEnabled(true);
+                          else alert('Notifications blocked. Please enable them in browser settings.');
+                        });
+                      } else {
+                        setNotificationsEnabled(false);
+                      }
+                    }}
+                    className={styles.timeFormatToggle}
+                  >
+                    <span className={notificationsEnabled ? styles.active : ''}>On</span>
+                    <span className={!notificationsEnabled ? styles.active : ''}>Off</span>
+                  </button>
+                </div>
+                <div className={styles.settingRow}>
+                  <label className={styles.settingLabel}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                    </svg>
+                    Dark Mode
+                  </label>
+                  <button
+                    onClick={() => setIsDarkMode(!isDarkMode)}
+                    className={styles.timeFormatToggle}
+                  >
+                    <span className={isDarkMode ? styles.active : ''}>On</span>
+                    <span className={!isDarkMode ? styles.active : ''}>Off</span>
                   </button>
                 </div>
               </div>
