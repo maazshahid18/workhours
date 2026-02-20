@@ -558,10 +558,28 @@ export default function Home() {
                   <button
                     onClick={() => {
                       if (!notificationsEnabled) {
-                        Notification.requestPermission().then(p => {
-                          if (p === 'granted') setNotificationsEnabled(true);
-                          else alert('Notifications blocked. Please enable them in browser settings.');
-                        });
+                        if (!("Notification" in window)) {
+                          alert("This browser does not support desktop notifications");
+                          return;
+                        }
+
+                        if (Notification.permission === "granted") {
+                          setNotificationsEnabled(true);
+                          // Test notification
+                          new Notification("Notifications Enabled! 🔔");
+                        } else if (Notification.permission !== "denied") {
+                          Notification.requestPermission().then(p => {
+                            if (p === 'granted') {
+                              setNotificationsEnabled(true);
+                              new Notification("Notifications Enabled! 🔔");
+                            } else {
+                              setNotificationsEnabled(false);
+                            }
+                          });
+                        } else {
+                          alert('Notifications are blocked by browser. Please enable them in your browser settings.');
+                          setNotificationsEnabled(false);
+                        }
                       } else {
                         setNotificationsEnabled(false);
                       }
